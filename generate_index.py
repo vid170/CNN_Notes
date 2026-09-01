@@ -5,6 +5,14 @@ generate_index.py
 Scans the current directory for .html lecture note files and
 regenerates index.html as a styled list of links to all of them.
 
+Expects filenames like:
+    95_ConvNext_Architecture.html      -> "95 ConvNext Architecture"
+    97_Visualizing_CNNS.html           -> "97 Visualizing CNNS"
+    Lec-96_FineTuning_CNNs.html        -> "96 FineTuning CNNs"
+
+Underscores/hyphens in the name portion become spaces, and files
+are sorted numerically by lecture number (not alphabetically).
+
 Usage:
     python3 generate_index.py
 
@@ -19,32 +27,37 @@ from datetime import datetime
 # Files to exclude from the index (the index itself, templates, etc.)
 EXCLUDE = {"index.html", "notes_style_template.html"}
 
-def get_title(filepath):
-    """Try to extract the <title> or <h1> from the HTML file for a nicer label."""
-    try:
-        with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-            content = f.read(3000)  # only need the head/start
-        match = re.search(r"<h1[^>]*>(.*?)</h1>", content, re.IGNORECASE | re.DOTALL)
-        if match:
-            return re.sub(r"<[^>]+>", "", match.group(1)).strip()
-        match = re.search(r"<title[^>]*>(.*?)</title>", content, re.IGNORECASE | re.DOTALL)
-        if match:
-            return match.group(1).strip()
-    except Exception:
-        pass
-    # Fallback: prettify the filename
-    name = os.path.splitext(os.path.basename(filepath))[0]
-    return name.replace("_", " ").replace("-", " ").title()
+# Matches an optional "Lec" / "Lec-" / "Lec_" prefix, then digits,
+# then an optional separator, then the rest of the name.
+FILENAME_PATTERN = re.compile(r'^(?:lec[-_]?)?(\d+)[_\-]?(.*)$', re.IGNORECASE)
+
+def parse_filename(filename):
+    """Return (display_title, sort_key) parsed from the filename."""
+    base = os.path.splitext(filename)[0]
+    match = FILENAME_PATTERN.match(base)
+    if match:
+        num, name = match.groups()
+        name = name.replace('_', ' ').replace('-', ' ').strip()
+        title = f"{num} {name}".strip() if name else num
+        return title, int(num)
+    # Fallback for files that don't match the numbered pattern:
+    # prettify the filename and sort them after all numbered ones.
+    title = base.replace('_', ' ').replace('-', ' ').strip().title()
+    return title, float('inf')
 
 def build_index():
-    html_files = sorted(
+    html_files = [
         f for f in os.listdir(".")
         if f.endswith(".html") and f not in EXCLUDE
-    )
+    ]
+
+    # Parse and sort by lecture number
+    parsed = [(f, *parse_filename(f)) for f in html_files]
+    parsed.sort(key=lambda x: x[2])
 
     list_items = "\n".join(
-        f'    <li><a href="{f}">{get_title(f)}</a></li>'
-        for f in html_files
+        f'    <li><a href="{fname}">{title}</a></li>'
+        for fname, title, _ in parsed
     )
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -82,8 +95,8 @@ def build_index():
         f.write(html)
 
     print(f"index.html regenerated with {len(html_files)} notes:")
-    for f in html_files:
-        print(f"  - {f} → {get_title(f)}")
+    for fname, title, key in parsed:
+        print(f"  - {fname} -> \"{title}\" (sort key: {key})")
 
 if __name__ == "__main__":
     build_index()
