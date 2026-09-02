@@ -30,7 +30,7 @@
 <tr><td>0</td><td>ResNet-50 baseline</td><td>76.1%</td></tr>
 <tr><td>1</td><td><strong>Modern training recipe</strong> (300 epochs, AdamW, Mixup/CutMix/RandAugment, stochastic depth, label smoothing) — no architecture change</td><td>78.8%</td></tr>
 <tr><td>2</td><td>Macro design: stage ratio 3:4:6:3 → 3:3:9:3, "patchify" stem (4×4 stride-4 conv)</td><td>~79.5%</td></tr>
-<tr><td>3</td><td>ResNeXt-ify: grouped/depthwise conv + width increase</td><td>~80.5%</td></tr>
+<tr><td>3</td><td>ResNeXt-ify: original 3×3 conv made <strong>depthwise</strong> (still 3×3, not yet 7×7) + width increase</td><td>~80.5%</td></tr>
 <tr><td>4</td><td><strong>Inverted bottleneck</strong> (narrow→wide→narrow, like MobileNetV2 / Transformer MLP)</td><td>80.6%</td></tr>
 <tr><td>5</td><td><strong>Large kernel</strong> (move depthwise conv up in block, 3×3 → 7×7)</td><td>80.6%</td></tr>
 <tr><td>6</td><td>Micro design: ReLU→GELU, fewer activations (1/block), fewer norms (1/block), BatchNorm→LayerNorm, separate downsampling layers</td><td><strong>82.1%</strong></td></tr>
